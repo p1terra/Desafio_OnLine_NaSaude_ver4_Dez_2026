@@ -124,10 +124,14 @@
 	            
 	            <div class="max-w-md mx-auto text-center mt-6 space-y-2 relative z-10">
 	                <button id="score-table-btn" class="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors duration-200">Guia Rápido do Desafio</button>
-	                <div class="flex gap-2">
-	                    <button id="ranking-btn" class="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200">Ranking dos Meses</button>
-	                    <button id="monthly-ranking-btn" class="flex-1 bg-amber-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-amber-600 transition-colors duration-200">Ranking Mensal</button>
-	                </div>
+				<div class="flex gap-2">
+                    <button id="ranking-btn" class="flex-1 bg-blue-600 text-white font-bold py-3 px-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm sm:text-base">Ranking dos Meses</button>
+                    <button id="winners-btn" class="flex-1 bg-fuchsia-600 text-white font-bold py-3 px-2 rounded-lg hover:bg-fuchsia-700 transition-colors duration-200 text-sm sm:text-base">Ganhadores Mensais</button>
+                </div>
+                <div class="flex gap-2 mt-2">
+                    <button id="monthly-ranking-btn" class="flex-1 bg-amber-500 text-white font-bold py-3 px-2 rounded-lg hover:bg-amber-600 transition-colors duration-200 text-sm sm:text-base">Ranking Mensal</button>
+                    <button id="evolution-btn" class="flex-1 bg-rose-500 text-white font-bold py-3 px-2 rounded-lg hover:bg-rose-600 transition-colors duration-200 text-sm sm:text-base">Evolução do Mês</button>
+                </div>
 	                <button id="monthly-report-btn" class="w-full bg-green-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors duration-200">📂 Baixar Dados do Mês (Excel)</button>
 	                <div class="flex gap-2">
 	                    <button id="full-report-btn" class="w-full bg-sky-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-200">📂 Baixar Dados do Desafio (Excel)</button>
@@ -598,7 +602,33 @@
 	        </div>
 	
 	    </div>
-	
+		<div id="winners-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 p-4 z-50 overflow-y-auto flex items-center justify-center">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+                <div class="p-6">
+                    <h2 class="text-2xl font-bold text-center text-fuchsia-600 mb-4">🏆 Ganhadores Mensais</h2>
+                    <div id="winners-list" class="space-y-3"></div>
+                </div>
+                <div class="p-4 bg-gray-100 rounded-b-xl text-center">
+                    <button id="close-winners-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600">Fechar</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="evolution-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 p-4 z-50 overflow-y-auto flex items-center justify-center">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col">
+                <div class="p-6 flex-1 flex flex-col">
+                    <h2 class="text-2xl font-bold text-center text-rose-600 mb-4">Evolução da Pontuação (Dispersão)</h2>
+                    <p class="text-center text-gray-500 mb-4 text-sm">Meses: Anterior e Atual (Pontuação Acumulada no Mês)</p>
+                    <div class="w-full flex-1 relative">
+                        <canvas id="dailyEvolutionChart"></canvas>
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-100 rounded-b-xl text-center">
+                    <button id="close-evolution-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600">Fechar</button>
+                </div>
+            </div>
+        </div>
+		
 	    <script type="module">
 	        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 	        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -661,7 +691,8 @@
 	            allData: {},
 	            db: null,
 	            appId: 'desafio-saude-v3',
-	            chartInstance: null
+	            chartInstance: null,
+				evolutionChartInstance: null
 	        };
 	
 	        // --- DOM Elements ---
@@ -688,6 +719,8 @@
 	        const rankingModal = document.getElementById('ranking-modal');
 	        const scoreTableModal = document.getElementById('score-table-modal');
 	        const monthlyRankingModal = document.getElementById('monthly-ranking-modal');
+			const winnersModal = document.getElementById('winners-modal');
+        	const evolutionModal = document.getElementById('evolution-modal');
 	
 	        // --- HELPER FUNCTIONS ---
 	
@@ -1109,7 +1142,158 @@
 	                return `<div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border"><div class="flex items-center"><span class="text-xl w-8">${medal}</span><span class="font-bold">${score.name}</span></div><div class="text-right"><span class="font-bold text-amber-600 text-lg">${Math.round(score.monthly)} pts</span></div></div>`;
 	            }).join('');
 	        };
-	
+
+			// LÓGICA: Calcula o array acumulado diário de um mês para o gráfico
+        const getCumulativeDailyScores = (participantName, targetMonthIndex, targetYear) => {
+            const participantData = state.allData[participantName] || { dailyLogs: {} };
+            const dailyPointsByDate = {};
+            const weeklyStatsByMonday = {};
+
+            const getMondayKey = (dateString) => {
+                const d = new Date(dateString + 'T12:00:00');
+                const day = d.getDay();
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                const monday = new Date(d.getTime());
+                monday.setDate(diff);
+                return monday.toISOString().split('T')[0];
+            };
+
+            for (const dateKey in participantData.dailyLogs) {
+                const inputs = participantData.dailyLogs[dateKey].inputs;
+                let cleanEatingScore = 0;
+                if (inputs.cleanEating) {
+                    cleanEatingScore += inputs.cleanEating.noSweets ? 4 : 0;
+                    cleanEatingScore += inputs.cleanEating.noSoda ? 4 : 0;
+                    cleanEatingScore += inputs.cleanEating.noFastFood ? 4 : 0;
+                    cleanEatingScore += inputs.cleanEating.noFried ? 4 : 0;
+                }
+                const dailyPts = getFruitScore(inputs.fruitPortions) + (inputs.hydration ? 15 : 0) + cleanEatingScore + (inputs.sleep ? 10 : 0) + getSelfCareScore(inputs.selfCareActivities);
+                dailyPointsByDate[dateKey] = dailyPts;
+
+                const mondayKey = getMondayKey(dateKey);
+                if (!weeklyStatsByMonday[mondayKey]) weeklyStatsByMonday[mondayKey] = { aerobicMins: 0, strengthSessions: 0 };
+                weeklyStatsByMonday[mondayKey].aerobicMins += (inputs.aerobicMinutes || 0);
+                const strengthVal = inputs.strengthSessions !== undefined ? Number(inputs.strengthSessions) : (inputs.strengthSessionBoolean ? 1 : 0);
+                weeklyStatsByMonday[mondayKey].strengthSessions += strengthVal;
+            }
+
+            const daysInMonth = new Date(targetYear, targetMonthIndex + 1, 0).getDate();
+            const dailyTotals = Array(daysInMonth).fill(0);
+
+            for (const dateKey in dailyPointsByDate) {
+                const d = new Date(dateKey + 'T12:00:00');
+                if (d.getMonth() === targetMonthIndex && d.getFullYear() === targetYear) {
+                    dailyTotals[d.getDate() - 1] += dailyPointsByDate[dateKey];
+                }
+            }
+
+            for (const mondayKey in weeklyStatsByMonday) {
+                const stats = weeklyStatsByMonday[mondayKey];
+                const totalWeeklyScore = getAerobicScore(stats.aerobicMins) + getStrengthScore(stats.strengthSessions);
+                const dailyFraction = totalWeeklyScore / 7;
+                const mondayDate = new Date(mondayKey + 'T12:00:00');
+                for (let i = 0; i < 7; i++) {
+                    const currentDay = new Date(mondayDate.getTime());
+                    currentDay.setDate(mondayDate.getDate() + i);
+                    if (currentDay.getMonth() === targetMonthIndex && currentDay.getFullYear() === targetYear) {
+                        dailyTotals[currentDay.getDate() - 1] += dailyFraction;
+                    }
+                }
+            }
+
+            let cumulative = 0;
+            const cumulativeScores = [];
+            for (let i = 0; i < daysInMonth; i++) {
+                cumulative += dailyTotals[i];
+                cumulativeScores.push(cumulative);
+            }
+            return cumulativeScores;
+        };
+
+        // LÓGICA: Atualiza a tela de Ganhadores Mensais
+        const updateWinnersUI = () => {
+            const winnersList = document.getElementById('winners-list');
+            const today = new Date();
+            const currentMonthIndex = today.getMonth();
+            const year = today.getFullYear();
+            const monthsNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+            let html = '';
+            for (let m = 0; m <= currentMonthIndex; m++) {
+                let maxScore = 0;
+                let winner = "Nenhum";
+
+                participants.forEach(p => {
+                    const score = calculateMonthlyScore(p, m, year);
+                    if (score > maxScore) { maxScore = score; winner = p; } 
+                    else if (score === maxScore && score > 0) { winner += ` e ${p}`; } // Empate
+                });
+
+                if (maxScore > 0) {
+                    html += `<div class="flex justify-between items-center bg-fuchsia-50 p-3 rounded-lg border border-fuchsia-100"><span class="font-bold text-gray-700">${monthsNames[m]}</span><div><span class="font-bold text-fuchsia-700 mr-2">👑 ${winner}</span><span class="text-sm text-gray-500">(${Math.round(maxScore)} pts)</span></div></div>`;
+                } else {
+                    html += `<div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200"><span class="font-bold text-gray-500">${monthsNames[m]}</span><span class="text-gray-400 text-sm">Sem dados</span></div>`;
+                }
+            }
+            winnersList.innerHTML = html || '<p class="text-center text-gray-500">Nenhum ganhador registrado ainda.</p>';
+        };
+
+        // LÓGICA: Atualiza o Gráfico de Dispersão (Mês Atual e Anterior)
+        const updateEvolutionScatterChart = () => {
+            const ctx = document.getElementById('dailyEvolutionChart').getContext('2d');
+            const today = new Date();
+            const currMonth = today.getMonth();
+            const currYear = today.getFullYear();
+            const prevMonth = currMonth === 0 ? 11 : currMonth - 1;
+            const prevYear = currMonth === 0 ? currYear - 1 : currYear;
+
+            const daysInPrev = new Date(prevYear, prevMonth + 1, 0).getDate();
+            const daysInCurr = new Date(currYear, currMonth + 1, 0).getDate();
+
+            const labels = [];
+            for (let i = 1; i <= daysInPrev; i++) labels.push(`${String(i).padStart(2, '0')}/${String(prevMonth + 1).padStart(2, '0')}`);
+            for (let i = 1; i <= daysInCurr; i++) labels.push(`${String(i).padStart(2, '0')}/${String(currMonth + 1).padStart(2, '0')}`);
+
+            // Estilos de pontos customizados para o Gráfico de Dispersão
+            const pointStylesList = ['circle', 'triangle', 'rect', 'rectRot', 'star', 'cross', 'crossRot'];
+
+            const datasets = participants.map((pName, index) => {
+                const prevScores = getCumulativeDailyScores(pName, prevMonth, prevYear);
+                const currScores = getCumulativeDailyScores(pName, currMonth, currYear);
+                const data = [...prevScores, ...currScores];
+
+                return {
+                    label: pName,
+                    data: data,
+                    backgroundColor: participantColors[pName] || '#000',
+                    borderColor: participantColors[pName] || '#000',
+                    pointStyle: pointStylesList[index % pointStylesList.length], // Símbolo diferente por participante
+                    pointRadius: 6,
+                    pointHoverRadius: 9,
+                    showLine: false, // Fundamental: tira as linhas e converte num Gráfico de Dispersão Puro
+                    type: 'line'
+                };
+            });
+
+            if (state.evolutionChartInstance) { state.evolutionChartInstance.destroy(); }
+
+            state.evolutionChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Dias (Mês Anterior e Atual)' }, ticks: { maxRotation: 45, minRotation: 45 } },
+                        y: { title: { display: true, text: 'Pontuação Acumulada' }, beginAtZero: true }
+                    },
+                    plugins: {
+                        tooltip: { mode: 'nearest', intersect: false },
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
+                    }
+                }
+            });
+        };
 	        const exportMonthlyReport = () => {
 	             const today = new Date();
 	             const currentMonthKey = getMonthKey(today);
@@ -1387,6 +1571,11 @@
 	        document.getElementById('close-ranking-btn')?.addEventListener('click', () => { rankingModal.classList.add('hidden'); });
 	        document.getElementById('close-score-table-btn')?.addEventListener('click', () => { scoreTableModal.classList.add('hidden'); });
 	        document.getElementById('close-monthly-ranking-btn')?.addEventListener('click', () => { monthlyRankingModal.classList.add('hidden'); });
+				// Listeners para os botões novos
+	        document.getElementById('winners-btn')?.addEventListener('click', () => { updateWinnersUI(); winnersModal.classList.remove('hidden'); });
+	        document.getElementById('evolution-btn')?.addEventListener('click', () => { updateEvolutionScatterChart(); evolutionModal.classList.remove('hidden'); });
+	        document.getElementById('close-winners-btn')?.addEventListener('click', () => { winnersModal.classList.add('hidden'); });
+	        document.getElementById('close-evolution-btn')?.addEventListener('click', () => { evolutionModal.classList.add('hidden'); });
 	
 	        // Initialize Firebase
 	        const init = async () => {
