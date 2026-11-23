@@ -3,7 +3,7 @@
 	<head>
 	    <meta charset="UTF-8">
 	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-	    <title>Desafio da Saúde 3.0 - Edição 2026</title>
+	    <title>Desafio da Saúde 4.0 - Edição Dez-2026</title>
 	    <script src="https://cdn.tailwindcss.com"></script>
 	    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 	    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -100,8 +100,8 @@
 	        <div id="setup-screen" class="hidden">
 	            <header class="text-center mb-6 max-w-md mx-auto">
 	                 <img src="imagens/logo_desafio.png" alt="logo" class="mx-auto w-full max-w-xs rounded-lg mb-4" onerror="this.style.display='none'">
-	                <h1 class="text-3xl sm:text-4xl font-bold text-teal-600">Desafio da Saúde 3.0</h1>
-	                <p class="text-gray-500 mt-1 font-semibold">🍴Edição 2026 (12/01 a 20/12)💪🏼</p>
+	                <h1 class="text-3xl sm:text-4xl font-bold text-teal-600">Desafio da Saúde 4.0</h1>
+	                <p class="text-gray-500 mt-1 font-semibold">🍴Edição 2026 (23/11 a 20/12)💪🏼</p>
 	                <div id="day-counter" class="mt-2 text-2xl font-bold text-orange-600 bg-orange-100 py-2 px-4 rounded-full inline-block"></div>
 	            </header>
 	
@@ -445,17 +445,17 @@
 	                                <label class="block text-sm font-medium text-teal-800 mb-2">2.1 Quantas porções de frutas/vegetais?</label>
 	                                <div class="grid grid-cols-6 gap-2" id="fruit-selector">
 	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="0">0</button>
-	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="1">1</button>
-	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="2">2</button>
-	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="3">3</button>
-	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="4">4</button>
-	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="5">5+</button>
+	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="1">0</button>
+	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="2">1</button>
+	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="3">2</button>
+	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="4">3</button>
+	                                    <button type="button" class="selector-btn fruit-option py-3 rounded-lg font-medium" data-value="5">4+</button>
 	                                </div>
 	                                <input type="hidden" id="fruit-portions-input" value="0">
 	                                
 	                                <div class="text-xs text-gray-500 mt-2 flex justify-between px-1">
 	                                    <span>0 pts</span>
-	                                    <span>2 pts</span>
+	                                    <span>0 pts</span>
 	                                    <span>4 pts</span>
 	                                    <span>6 pts</span>
 	                                    <span>12 pts</span>
@@ -635,23 +635,23 @@
 	        import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 	
 	        // --- CONFIGURAÇÃO 3.0 ---
-	        const participants = ['Carol', 'Iagê', 'Juliana', 'Mariana', 'Radmila', 'Lia'];
+	        const participants = ['Carol', 'Iagê', 'Juliana', 'Radmila'];
 	        
 	        // Cores Okabe-Ito (Acessíveis para daltônicos)
 	        const participantColors = {
 	            'Carol': '#E69F00',   // Laranja
 	            'Iagê': '#56B4E9',    // Azul Céu
 	            'Juliana': '#009E73', // Verde Azulado
-	            'Mariana': '#F0E442', // Amarelo
+	            //'Mariana': '#F0E442', // Amarelo
 	            'Radmila': '#0072B2', // Azul
 	            //'Pedro': '#D55E00',   // Vermelho
-	            'Lia': '#CC79A7'      // Púrpura Avermelhado
+	            //'Lia': '#CC79A7'      // Púrpura Avermelhado
 	        };
 	
 	        const challengeStartDate = new Date('2026-01-12T00:00:00');
 	        const challengeEndDate = new Date('2026-12-20T23:59:59');
 	
-	        const SELFCARE_ACTIVITIES = ['Meditação ou Mindfulness', 'Alongamento ou Mobilidade', 'Contato com a Natureza', 'Leitura por Prazer'];
+	        const SELFCARE_ACTIVITIES = ['Meditação ou Mindfulness', 'Alongamento ou Mobilidade', 'Contato com a Natureza', 'Leitura por Prazer', 'Autocuidado'];
 			const MOTIVATIONAL_QUOTES = [
 	            "Cada passo conta. Continue em frente!",
 	            "O seu corpo de amanhã agradece o seu esforço de hoje.",
